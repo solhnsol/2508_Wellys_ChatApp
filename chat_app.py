@@ -142,4 +142,4 @@ with gr.Blocks(theme=gr.themes.Soft()) as chat_demo:
     )
 
 if __name__ == "__main__":
-    chat_demo.launch(server_port=7861)
+    chat_demo.launch(server_port=7861, server_name="0.0.0.0")
