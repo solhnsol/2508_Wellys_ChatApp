@@ -12,4 +12,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 7861
 
-# CMD ["python", "chat_app.py"]
+CMD ["python", "chat_app.py"]
