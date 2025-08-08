@@ -123,4 +123,4 @@ with gr.Blocks(theme=gr.themes.Soft(), css="footer {display: none !important}") 
     )
 
 if __name__ == "__main__":
-    chat_demo.launch(server_port=7861)
+    chat_demo.launch(server_port=7861, server_name="0.0.0.0")
