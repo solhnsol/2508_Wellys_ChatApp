@@ -80,7 +80,7 @@ async def auto_start_session_async():
 async def end_session_async(session_id):
     if not session_id:
         # ChatInterface를 초기화하고, 비활성화된 메시지를 표시
-        return None, None, gr.update(value=[[None, "Session not active. Refresh to start."]], interactive=False)
+        return None, None, [[None, "Session not started. Please refresh the page."]]
 
     end_endpoint = f"{BASE_API_URL}/end"
     try:
@@ -88,7 +88,7 @@ async def end_session_async(session_id):
             await client.post(end_endpoint, json={"session_id": session_id}, timeout=10)
         print(f"Session ended manually: {session_id}")
         # 세션 종료 후, ChatInterface를 초기화하고 종료 메시지를 표시
-        return None, None, gr.update(value=[[None, "Session ended. Please refresh the page."]], interactive=False)
+        return None, None, [[None, "Session ended. Please refresh the page."]]
     except Exception as e:
         print(f"Error ending session: {e}")
         # 에러 발생 시 현재 상태 유지
@@ -125,8 +125,8 @@ with gr.Blocks(theme=gr.themes.Soft(), css="footer {display: none !important}") 
         end_session_async,
         inputs=[session_id_state],
         # 종료 시 세션ID, JS용ID, 그리고 ChatInterface 자체를 초기화
-        outputs=[session_id_state, session_id_for_js, chat_interface] 
+        outputs=[session_id_state, session_id_for_js, chat_interface.chatbot]
     )
 
 if __name__ == "__main__":
-    chat_demo.launch(server_port=7861, server_name="0.0.0.0")
+    chat_demo.launch(server_port=7861)
