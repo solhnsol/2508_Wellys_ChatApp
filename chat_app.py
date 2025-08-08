@@ -92,7 +92,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css="footer {display: none !important}") 
     
     gr.Markdown("# Wellys Chat Service")
     
-    chatbot = gr.Chatbot(label="Wellys", height=700, type="messages")
+    chatbot = gr.Chatbot(label="Wellys", height=500, type="messages")
     with gr.Row():
         msg_textbox = gr.Textbox(
             show_label=False,
