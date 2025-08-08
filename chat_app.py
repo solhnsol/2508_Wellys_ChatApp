@@ -92,11 +92,11 @@ with gr.Blocks(theme=gr.themes.Soft(), css="footer {display: none !important}") 
     
     gr.Markdown("# Wellys Chat Service")
     
-    chatbot = gr.Chatbot(label="Wellys", height=600, type="messages")
+    chatbot = gr.Chatbot(label="Wellys", type="messages")
     with gr.Row():
         msg_textbox = gr.Textbox(
             show_label=False,
-            placeholder="Type a message and press Enter or click the send button.",
+            placeholder="Type a message",
             scale=7,
         )
         send_btn = gr.Button("Send", scale=1)
