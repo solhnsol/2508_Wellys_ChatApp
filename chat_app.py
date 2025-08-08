@@ -29,7 +29,7 @@ async def respond_async(message, chat_history, session_id):
 
     # 1. 사용자 메시지와 "생각 중" placeholder를 함께 추가
     chat_history.append({"role": "user", "content": message})
-    chat_history.append({"role": "assistant", "content": "생각 중입니다..."})
+    chat_history.append({"role": "assistant", "content": "Thinking..."})
     # 2. UI 즉시 업데이트 (입력창 비우기, 챗봇 업데이트, 전송 버튼 비활성화)
     yield "", chat_history, gr.update(interactive=False)
 
@@ -51,7 +51,7 @@ async def respond_async(message, chat_history, session_id):
     except Exception as e:
         print(f"Error sending message: {e}")
         # 에러 발생 시, 마지막 "생각 중" 메시지를 에러 메시지로 교체
-        chat_history[-1] = {"role": "assistant", "content": f"**에러 발생:** {e}"}
+        chat_history[-1] = {"role": "assistant", "content": f"**Error:** {e}"}
         yield "", chat_history, gr.update(interactive=True)
 
 async def start_session_async(user_name_input):
@@ -66,14 +66,14 @@ async def start_session_async(user_name_input):
             )
             response.raise_for_status()
         print(f"Session started: {session_id} for user {user_name_input}")
-        return session_id, [], gr.update(interactive=True), gr.update(value=f"세션 ID: {session_id[:5]}.. - {user_name_input}님 환영합니다!")
+        return session_id, [], gr.update(interactive=True), gr.update(value=f"Session ID: {session_id[:5]}.. - Welcome, {user_name_input}!")
     except Exception as e:
         print(f"Error starting session: {e}")
-        return None, [], gr.update(interactive=False), gr.update(value=f"세션 시작 실패: {e}")
+        return None, [], gr.update(interactive=False), gr.update(value=f"Failed to start session: {e}")
 
 async def end_session_async(session_id):
     if not session_id:
-        return None, [], gr.update(interactive=False), gr.update(value="시작된 세션이 없습니다.")
+        return None, [], gr.update(interactive=False), gr.update(value="There is no session online.")
 
     end_endpoint = f"{BASE_API_URL}/end"
     try:
@@ -85,36 +85,36 @@ async def end_session_async(session_id):
             )
             response.raise_for_status()
         print(f"Session ended: {session_id}")
-        return None, [], gr.update(interactive=False), gr.update(value="세션이 종료되었습니다. 새 세션을 시작하세요.")
+        return None, [], gr.update(interactive=False), gr.update(value="Session ended. Please create a new session.")
     except Exception as e:
         print(f"Error ending session: {e}")
         # 비동기 함수 호출 시 await 추가
-        return session_id, await get_history_async(session_id), gr.update(interactive=True), gr.update(value=f"세션 종료 실패: {e}")
+        return session_id, await get_history_async(session_id), gr.update(interactive=True), gr.update(value=f"Failed to close session: {e}")
 
 with gr.Blocks(theme=gr.themes.Soft()) as chat_demo:
     session_id_state = gr.State(value=None)
     
-    gr.Markdown("# Wellys 채팅 서비스")
+    gr.Markdown("# Wellys Chat Service")
 
     with gr.Row():
-        user_name_input = gr.Textbox(label="사용자 이름", value="", scale=3)
-        start_btn = gr.Button("새 세션 시작", scale=1)
-        end_btn = gr.Button("세션 종료", scale=1)
+        user_name_input = gr.Textbox(label="Name", value="", scale=3)
+        start_btn = gr.Button("Create Session", scale=1)
+        end_btn = gr.Button("End Session", scale=1)
 
-    session_status_output = gr.Textbox(label="세션 상태", interactive=False)
+    session_status_output = gr.Textbox(label="Session Status", interactive=False)
 
-    chatbot = gr.Chatbot(label="채팅 기록", type="messages", height=500)
+    chatbot = gr.Chatbot(label="Chat History", type="messages", height=500)
     
     with gr.Row():
         msg = gr.Textbox(
-            label="메시지 입력",
+            label="Enter message",
             interactive=False,
             container=False,
             show_label=False,
-            placeholder="메시지를 입력하고 Enter를 누르세요...",
+            placeholder="Type a message and press Enter key",
             scale=8,
         )
-        send_btn = gr.Button("입력", scale=1) 
+        send_btn = gr.Button("Enter", scale=1) 
 
     # .click() 메서드에 비동기 함수를 직접 전달합니다. Gradio가 비동기 함수를 자동으로 처리합니다.
     start_btn.click(
