@@ -2,7 +2,7 @@ import gradio as gr
 import requests
 from requests import HTTPError
 
-BASE_API_URL = "https://wellys-chat-service.onrender.com:8000"
+BASE_API_URL = "https://wellys-chat-service.onrender.com"
 
 def history(session_id):
     try:
