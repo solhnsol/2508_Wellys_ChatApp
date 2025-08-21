@@ -1,126 +1,109 @@
 import gradio as gr
-import httpx
-import uuid
-import asyncio
+import requests
+from requests import HTTPError
 
-BASE_API_URL = "https://wellys-chat-service.onrender.com"
+BASE_API_URL = "http://Wellys_ChatBot:8000"
 
-# JavaScript code remains unchanged.
-js_script = f"""
-function(session_id) {{
-    if (window.unloadListener) {{
-        window.removeEventListener('beforeunload', window.unloadListener);
-    }}
-    window.unloadListener = () => {{
-        if (session_id) {{
-            const url = `{BASE_API_URL}/end`;
-            const data = new Blob([JSON.stringify({{ "session_id": session_id }})], {{ type: 'application/json' }});
-            navigator.sendBeacon(url, data);
-        }}
-    }};
-    window.addEventListener('beforeunload', window.unloadListener);
-    return null;
-}}
-"""
-
-async def get_history(session_id):
-    async with httpx.AsyncClient() as client:
-        response = await client.post(f"{BASE_API_URL}/history", json={"session_id": session_id}, timeout=10)
+def history(session_id):
+    try:
+        response = requests.post(f"{BASE_API_URL}/history", json={"session_id": session_id})
         response.raise_for_status()
-        return response.json().get("message", [])
+        return response.json()["message"]
+    except HTTPError as e:
+        print(f"오류: {e}")
 
-# --- All user-facing strings are now in English ---
-async def respond_for_ui(message, chat_history, session_id):
-    if not session_id:
-        chat_history.append({'role': 'user', 'content': message})
-        chat_history.append({'role': 'assistant', 'content': "Session not started. Please refresh the page."})
-        yield "", chat_history
-        return
-
-    if not message.strip():
-        yield "", chat_history
-        return
-
-    chat_history.append({'role': 'user', 'content': message})
-    yield "", chat_history
-
+def start(user_name):
     try:
-        async with httpx.AsyncClient() as client:
-            await client.post(f"{BASE_API_URL}/chat", json={"session_id": session_id, "content": message}, timeout=20)
-            
-            updated_history = await get_history(session_id)
-            
-            yield "", updated_history
+        response = requests.post(f"{BASE_API_URL}/start", json={"user_name": user_name})
+        response.raise_for_status()
+        print(f"세션이 정상적으로 생성되었습니다.")
+        return response.json()["session_id"]
+    except HTTPError as e:
+        print(f"오류: {e}")
+        return "세션 생성에 실패했습니다."
 
-    except Exception as e:
-        print(f"Error in respond_for_ui: {e}")
-        chat_history.append({'role': 'assistant', 'content': f"An error occurred: {e}"})
-        yield "", chat_history
-
-
-async def auto_start_session_async():
-    session_id = str(uuid.uuid4())
-    print(f"Session started automatically: {session_id}")
+def chat(session_id, text):
     try:
-        async with httpx.AsyncClient() as client:
-            await client.post(f"{BASE_API_URL}/start", json={"session_id": session_id, "user_name": "Guest"}, timeout=10)
-        return session_id
-    except Exception as e:
-        print(f"Error starting session automatically: {e}")
-        return None
+        response = requests.post(f"{BASE_API_URL}/chat", json={"session_id": session_id, "content": text})
+        response.raise_for_status()
+        message = response.json()["message"]
 
-# --- All user-facing strings are now in English ---
-async def end_session_async(session_id):
-    final_message = "Session has ended. Please refresh the page to start a new one."
-    final_message_for_chatbot = [{'role': 'assistant', 'content': final_message}]
+        chat_history = history(session_id)
+        if chat_history is None:
+                return "챗봇 응답을 가져오는 데 실패했습니다."
+        return chat_history
+        
+    except HTTPError as e:
+        print(f"오류: {e}")
+        # 오류 발생 시 사용자에게 보여줄 메시지를 반환합니다.
+        return f"챗봇 서버에서 오류가 발생했습니다: {e}"
 
-    if not session_id:
-        return None, final_message_for_chatbot, gr.update(interactive=False, placeholder="Session Ended"), gr.update(interactive=False)
-
+def end(session_id):
     try:
-        async with httpx.AsyncClient() as client:
-            await client.post(f"{BASE_API_URL}/end", json={"session_id": session_id}, timeout=10)
-        print(f"Session ended manually: {session_id}")
-        return None, final_message_for_chatbot, gr.update(interactive=False, placeholder="Session Ended"), gr.update(interactive=False)
-    except Exception as e:
-        print(f"Error ending session: {e}")
-        return session_id, gr.update(), gr.update(), gr.update()
+        response = requests.post(f"{BASE_API_URL}/end", json={"session_id": session_id})
+        response.raise_for_status()
+        return response.json()["message"]
+    except HTTPError as e:
+        print(f"오류: {e}")
 
-# --- UI strings are now in English ---
-with gr.Blocks(theme=gr.themes.Soft(), css="footer {display: none !important}") as chat_demo:
-    session_id_state = gr.State(value=None)
-    
-    gr.Markdown("# Wellys Chat Service")
-    
-    chatbot = gr.Chatbot(label="Wellys", height=500, type="messages")
+with gr.Blocks(theme="soft") as demo:
+    session_id_state = gr.State()
+
+    gr.Markdown(
+        """
+        # Wellys AI 채팅 서비스
+        당신의 건강을 책임지는 Wellys 입니다.
+        """
+    )
+
+    chatbot = gr.Chatbot(
+        [],
+        elem_id="chatbot",
+        height=460,
+        type="messages"
+    )
+
     with gr.Row():
-        msg_textbox = gr.Textbox(
+        txt = gr.Textbox(
             show_label=False,
-            placeholder="Type a message",
+            placeholder="Wellys 에게 물어보세요..",
+            container=False,
             scale=7,
         )
-        send_btn = gr.Button("Send", scale=1)
+        submit_btn = gr.Button("전송", scale=1)
 
-    end_btn = gr.Button("End Session")
-
-    chat_demo.load(
-        auto_start_session_async,
-        outputs=[session_id_state]
+    gr.Examples(
+        [["요즘 허리가 아픈데, 갱년기 증상일까?"], ["여성 건강에 좋은 음식을 알고 싶어."], ["갱년기 건강 관리 방법 알려줘"]],
+        inputs=txt
     )
 
-    submit_args = {
-        'fn': respond_for_ui,
-        'inputs': [msg_textbox, chatbot, session_id_state],
-        'outputs': [msg_textbox, chatbot]
-    }
-    send_btn.click(**submit_args)
-    msg_textbox.submit(**submit_args)
+    # 챗봇 응답을 처리하는 함수
+    def add_message(history, message):
+        # 사용자 메시지를 먼저 화면에 표시
+        return history + [{"role" : "user", "content": message}]
 
-    end_btn.click(
-        fn=end_session_async,
-        inputs=[session_id_state],
-        outputs=[session_id_state, chatbot, msg_textbox, send_btn] 
+    # 사용자가 메시지를 입력하고 '전송' 버튼을 누르거나 엔터를 쳤을 때 실행될 함수
+    def bot_response(history, session_id):
+        user_message = history[-1]["content"]
+        new_history = chat(session_id, user_message)
+
+        return new_history, None
+
+    txt.submit(add_message, [chatbot, txt], [chatbot], queue=False).then(
+        bot_response, [chatbot, session_id_state], [chatbot, txt]
     )
+    submit_btn.click(add_message, [chatbot, txt], [chatbot], queue=False).then(
+        bot_response, [chatbot, session_id_state], [chatbot, txt]
+    )
+
+    # UI가 처음 로드될 때 실행되는 함수
+    def start_session():
+        user_name = "홍길순"
+        new_session_id = start(user_name)
+        return new_session_id
+
+    demo.load(start_session, inputs=None, outputs=[session_id_state])
+
 
 if __name__ == "__main__":
-    chat_demo.launch(server_port=7861, server_name="0.0.0.0")
+    demo.launch(server_port=7861)
